@@ -23,7 +23,7 @@ namespace UnitTests
         [TestMethod]
         public void Ctor_NullFile_Exception()
         {
-            Action act = () => new FileLoggerProvider(null);
+            Action act = () => new FileLoggerProvider(null, 1);
 
             act.Should().Throw<ArgumentNullException>();
         }
@@ -31,7 +31,7 @@ namespace UnitTests
         [TestMethod]
         public void Dispose_MultipleTimes_DoesNotThrow()
         {
-            var sut = new FileLoggerProvider(logFile);
+            var sut = new FileLoggerProvider(logFile, 1);
 
             sut.Dispose();
             Action act = () => sut.Dispose();
@@ -43,7 +43,7 @@ namespace UnitTests
         public void Dispose_ManyLogMessages_WaitsUntilAllWritten()
         {
             // ARRANGE
-            var sut = new FileLoggerProvider(logFile);
+            var sut = new FileLoggerProvider(logFile, 1);
             var logger = sut.CreateLogger("name");
             var blockWrite = true;
             
@@ -82,7 +82,7 @@ namespace UnitTests
         [TestMethod]
         public void Dispose_LogFileDisposed()
         {
-            var sut = new FileLoggerProvider(logFile);
+            var sut = new FileLoggerProvider(logFile, 1);
 
             sut.Dispose();
 
@@ -92,7 +92,7 @@ namespace UnitTests
         [TestMethod]
         public void CreateLogger_FirstTime_NewLoggerCreated()
         {
-            var sut = new FileLoggerProvider(logFile);
+            var sut = new FileLoggerProvider(logFile, 1);
 
             var logger = sut.CreateLogger("name");
 
@@ -102,7 +102,7 @@ namespace UnitTests
         [TestMethod]
         public void CreateLogger_MultipleTimesWithTheSameName_ExistingReturned()
         {
-            var sut = new FileLoggerProvider(logFile);
+            var sut = new FileLoggerProvider(logFile, 1);
             const string loggerName = "name";
 
             var logger1 = sut.CreateLogger(loggerName);
@@ -114,7 +114,7 @@ namespace UnitTests
         [TestMethod]
         public void CreateLogger_WithName_LoggerNameIsLogged()
         {
-            var sut = new FileLoggerProvider(logFile);
+            var sut = new FileLoggerProvider(logFile, 1);
             const string loggerName = "my logger name";
             var logger = sut.CreateLogger(loggerName);
 
@@ -122,6 +122,21 @@ namespace UnitTests
 
             A.CallTo(() => logFile.Write(A<string>.That.Contains(loggerName), A<bool>._))
                 .MustHaveHappenedOnceExactly();
+        }
+
+        [TestMethod]
+        public void BackgroundThread_TransientIOError_ContinuesWorking()
+        {
+            var sut = new FileLoggerProvider(logFile, 1);
+            var logger = sut.CreateLogger("name");
+            A.CallTo(() => logFile.Write(A<string>._, A<bool>._)).Throws<Exception>().Once().Then.DoesNothing();
+
+            logger.LogInformation("message 1");
+            logger.LogInformation("message 2");
+            sut.Dispose();
+
+            A.CallTo(() => logFile.Write(A<string>.That.Contains("message 1"), A<bool>._)).MustHaveHappenedOnceExactly()
+                .Then(A.CallTo(() => logFile.Write(A<string>.That.Contains("message 2"), A<bool>._)).MustHaveHappenedOnceExactly());
         }
     }
 }

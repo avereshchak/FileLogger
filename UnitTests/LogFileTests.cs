@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Text;
 using FakeItEasy;
 using FluentAssertions;
@@ -65,7 +63,7 @@ namespace UnitTests
             while (total < maxSize + 1)
             {
                 total += message.Length;
-                sut.Write("message", false);
+                sut.Write("message", true);
             }
 
             A.CallTo(() => fileSystem.OpenWrite(fileName)).MustHaveHappened()

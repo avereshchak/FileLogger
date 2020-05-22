@@ -1,7 +1,7 @@
-﻿ using System;
+﻿using System;
 using System.IO;
 
-namespace MsLogging.FileLogger.Implementation
+ namespace MsLogging.FileLogger.Implementation
 {
     internal class FileSystem : IFileSystem
     {
@@ -9,7 +9,7 @@ namespace MsLogging.FileLogger.Implementation
         {
             if (string.IsNullOrWhiteSpace(name)) throw new ArgumentNullException(nameof(name));
             
-            var stream = File.OpenWrite(name);
+            var stream = new FileStream(name, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.Read);
             stream.Seek(0, SeekOrigin.End);
             return stream;
         }
@@ -22,7 +22,6 @@ namespace MsLogging.FileLogger.Implementation
                 return;
 
             var archiveName = BuildArchiveName(name);
-
             File.Move(name, archiveName);
         }
 
@@ -35,9 +34,10 @@ namespace MsLogging.FileLogger.Implementation
             var directoryName = Path.GetDirectoryName(sourceName);
             var nameWithoutExtension = Path.GetFileNameWithoutExtension(sourceName);
             var archiveExtension = Path.GetExtension(sourceName);
-            var archiveName = $"{directoryName}\\{nameWithoutExtension}_{timestamp}{archiveExtension}";
-            
-            return archiveName;
+
+            var archiveName = $"{nameWithoutExtension}_{timestamp}{archiveExtension}";
+            var archivePath = Path.Combine(directoryName, archiveName);
+            return archivePath;
         }
     }
 }

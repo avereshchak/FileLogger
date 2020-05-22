@@ -11,6 +11,12 @@ namespace MsLogging.FileLogger.Implementation
         private StreamWriter currentWriter;
         private Stream currentStream;
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="fileSystem"></param>
+        /// <param name="name"></param>
+        /// <param name="maxSize">File size limit. Set 0 to make it unlimited.</param>
         public LogFile(IFileSystem fileSystem, string name, int maxSize)
         {
             this.fileSystem = fileSystem ?? throw new ArgumentNullException(nameof(fileSystem));
@@ -25,7 +31,8 @@ namespace MsLogging.FileLogger.Implementation
                 return;
 
             var writer = GetFileWriter();
-            if (currentStream.Length + message.Length > maxSize)
+
+            if (maxSize > 0 && currentStream.Length + message.Length > maxSize)
             {
                 ArchiveCurrent();
                 writer = GetFileWriter();
@@ -68,7 +75,7 @@ namespace MsLogging.FileLogger.Implementation
                 currentStream = fileSystem.OpenWrite(name);
                 currentWriter = new StreamWriter(currentStream)
                 {
-                    AutoFlush = true
+                    AutoFlush = false
                 };
             }
 

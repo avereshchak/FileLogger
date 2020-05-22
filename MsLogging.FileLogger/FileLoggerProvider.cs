@@ -14,10 +14,10 @@ namespace MsLogging.FileLogger
         private readonly Thread messagesWriter;
         private bool disposed;
 
-        public FileLoggerProvider(ILogFile logFile)
+        public FileLoggerProvider(ILogFile logFile, int maxBufferedMessages)
         {
             this.logFile = logFile ?? throw new ArgumentNullException(nameof(logFile));
-            messages = new BlockingCollection<string>();
+            messages = new BlockingCollection<string>(maxBufferedMessages);
             loggers = new ConcurrentDictionary<string, Implementation.FileLogger>();
 
             messagesWriter = new Thread(ThreadFunc) {IsBackground = true};
@@ -46,7 +46,18 @@ namespace MsLogging.FileLogger
         {
             foreach (var message in messages.GetConsumingEnumerable())
             {
-                logFile.Write(message, messages.Count == 0);
+                var flush = messages.Count == 0;
+
+                try
+                {
+                    logFile.Write(message, flush);
+                }
+                catch
+                {
+                    // The write operation outcome is unknown here, i.e. we cannot say
+                    // the message was written or not. Thus do not retry the operation.
+                    // On the other hand, it could be a transient error and the logging must not stop.
+                }
             }
         }
     }
